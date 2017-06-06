@@ -37,20 +37,35 @@ def main():
 #		camera.capture('test.jpg')
 
 		# make csv
-		with open('capture_log', 'wb') as csv_file:
-			wr = csv.writer(csv_file, quoting=csv.QUOTE_ALL)
-			wr.writerow(mylist)
+		with open('capture_log.csv', 'wb') as csv_file:
+			wr = csv.writer(csv_file, delimiter=',')
+			wr.writerow(['img', 'throttle', 'steering'])
 			# make serial connection
-			with serial.Serial(port, BAUD_RATE, timeout=1) as ser:
+			with serial.Serial(port, BAUD_RATE, timeout=10) as ser:
 				print("connected")
+				time.sleep(1)
+				init_capture_cmd = '0000{0:04d}'.format(args.capture_rate)
+				ser.reset_input_buffer()
+				ser.write(init_capture_cmd.encode())
+				ser.flush()
+				mode_check = ser.readline()
+				delay_check = ser.readline()
+				print("Verify: " + mode_check + " " + str(delay_check))
+				img_count = 1
 				while True:
 					# get latest input from arduino
 
-					data = ser.read(9)
-				# capture image
-
-				# write row of data to csv
-				# ['image_file_location', 'throttle', 'steering']
+					data = ser.readline()
+					print(data)
+					throttle = data[0:4]
+					steering = data[5:9]
+					img_name = './img/{0}_{1:05d}.jpg'.format(args.dir, img_count)
+					# capture image
+					camera.capture(img_name)
+					# write row of data to csv
+					# ['image_file', 'throttle', 'steering']
+					wr.writerow([img_name, throttle, steering])
+					img_count += 1
 
 if __name__ == '__main__':
 	main()
