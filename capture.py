@@ -1,12 +1,13 @@
 import os
 import time
-import picamera
+from picamera.array import PiRGBArray
+from picamera import PiCamera
 import argparse
 import serial
 import serial.tools.list_ports
 import csv
-import io
 import cv2
+
 def main():
 	BAUD_RATE = 115200
 	# argparse assignments
@@ -16,67 +17,53 @@ def main():
 	ports = list(serial.tools.list_ports.comports())
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-r", "--capture_rate", type=int, default=10, help="rate [Hz] at which images are captured")
+	parser.add_argument("-f", "--fps", type=int, default=10, help="image capture rate")
 	parser.add_argument("-d", "--dir", help="the directory name where the data will be stored", type=str)
-	parser.add_argument("-p", "--port", help="port name", type=str)
+	parser.add_argument("-p", "--port", help="serial port name", type=str)
 	args = parser.parse_args()
+	# assign port to arg, otherwise get the first available COM port
 	if args.port is not None:
 		port = args.port
 	else:
 		port = ports[0][0]
 
-	with picamera.PiCamera() as camera:
-		camera.resolution = (320, 240)
-		#camera.framerate = 80
-		#camera.start_preview()
+	with PiCamera() as camera:
+		camera.resolution = (320,240)
+		camera.framerate = args.fps
+		rawCapture = PiRGBArray(camera, size=(320,240))
 		time.sleep(2)
-		print("Capturing rate: " + str(args.capture_rate) + " Hz")
+		
+		# make dirs
 		if not os.path.exists('./' + args.dir):
 			os.mkdir(args.dir)
 		os.chdir('./' + args.dir)
 		if not os.path.exists('./img'):
 			os.mkdir('img')
 		# make csv
-		with open('capture_log.csv', 'wb') as csv_file:
+		with open('capture_log.csv', 'wt') as csv_file:
 			wr = csv.writer(csv_file, delimiter=',')
 			wr.writerow(['img', 'throttle', 'steering'])
 			# make serial connection
-			rawCapture = picamera.array.PiRGBArray(camera)
-			time.sleep(1)
-			camera.capture(rawCapture, format="bgr")
-			image = rawCapture.array
-
-"""			with serial.Serial(port, BAUD_RATE, timeout=10) as ser:
-				print("connected")
-				time.sleep(1)
-				ser.reset_input_buffer()
-				ser.reset_output_buffer()
-				prev_time = time.time()
-				count = 1
-				stream = io.BytesIO()
-				outputs = [io.BytesIO() for i in range(40)]
-				start = time.time()
-				camera.capture_sequence(outputs, 'jpeg', use_video_port=True)
-				finish = time.time()
-				print('Captured 40 images at %2.ffps' % (40 / (finish - start)))
-"""
-'''				while True:
-					# get latest input from arduino
-					ser.write('00000000'.encode())
+			with serial.Serial(port, BAUD_RATE, timeout=10) as ser:
+				ser.flushOutput()
+				ser.flushInput()
+				# capture frames
+				count = 0
+				for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
+					image = frame.array
+					#cv2.imshow('frame', image)
+					img_path = './img/img{:04d}.jpeg'.format(count)
+					ser.write(b'00000000')
 					ser.flush()
-					data = ser.readline().strip()
-					# print(data)
-					sp_data = data.split(':')
-					img_name = './img/{0}_{1:05d}.png'.format(args.dir, img_count)
-					# capture image
-					camera.capture(img_name)
-					# write row of data to csv
-					# ['image_file', 'throttle', 'steering']
-			#		wr.writerow([img_name, sp_data[0], sp_data[1]])
-					img_count += 1
-					if img_count % 10 == 0:
-						print("Loop time for 10 images: " + str(time.time() - prev_time))
-						prev_time = time.time()
-'''
+					data = ser.readline().decode('utf-8')
+					if data:
+						cv2.imwrite(img_path, image)
+						print(data)
+						sp_data = data.strip().split(':')	
+						wr.writerow([img_path, sp_data[0], sp_data[1]])
+						count += 1
+					rawCapture.truncate(0)
+						
+		
 if __name__ == '__main__':
 	main()
