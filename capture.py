@@ -7,7 +7,16 @@ import serial
 import serial.tools.list_ports
 import csv
 import cv2
+import sys
+import signal
 
+
+def signal_handler(signal, frame):
+	global interrupted
+	interrupted = True
+
+signal.signal(signal.SIGINT, signal_handler)
+interrupted = False
 def main():
 	BAUD_RATE = 115200
 	# argparse assignments
@@ -33,7 +42,6 @@ def main():
 		camera.framerate = args.fps
 		rawCapture = PiRGBArray(camera, size=(320,240))
 		print('Camera Started. Capturing @ %d fps' % args.fps)
-		time.sleep(2)
 		
 		# make dirs
 		if not os.path.exists('./' + args.dir):
@@ -46,9 +54,18 @@ def main():
 			wr = csv.writer(csv_file, delimiter=',')
 			wr.writerow(['img', 'throttle', 'steering'])
 			# make serial connection
-			with serial.Serial(port, BAUD_RATE, timeout=10) as ser:
+			with serial.Serial(port, BAUD_RATE, timeout=10, rtscts=0) as ser:
+				
 				ser.flushOutput()
+				ser.setDTR(False)
+				time.sleep(1)
 				ser.flushInput()
+				ser.setDTR(True)
+				time.sleep(1)
+				ser.write(b'00000000')
+				ser.flush()
+				chk = ser.readline().decode('utf-8')
+				print('Check: ' + chk)
 				# capture frames
 				count = 0
 				prev_time = time.time()
@@ -71,6 +88,9 @@ def main():
 					if (count + 1) % 10 == 0:
 						fps = 10.0 / (time.time() - prev_time)
 						prev_time = time.time()
+					if interrupted:
+						print('Exiting')
+						break
 						
 		
 if __name__ == '__main__':
