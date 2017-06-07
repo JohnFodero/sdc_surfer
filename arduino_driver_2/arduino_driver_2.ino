@@ -18,8 +18,7 @@ void setup()
   Serial.setTimeout(10000);
   pinMode(esc_pin, INPUT);
   pinMode(servo_pin, INPUT);
-  //ESC.attach(esc_pin);
-  //servo.attach(servo_pin);
+
 
 
   // initialize servo and ESC
@@ -39,14 +38,25 @@ void loop()
       // get inputs
       esc_pulse = pulseIn(esc_pin, HIGH);
       servo_pulse = pulseIn(servo_pin, HIGH);
-      //esc_pulse = 1111;
-      //servo_pulse = 2222;
       
       Serial.println(String(esc_pulse) + ":" + String(servo_pulse));		
       
     break;
   case '1':
     // control mode
+    ESC.attach(esc_pin);
+    servo.attach(servo_pin);
+    pinMode(esc_pin, OUTPUT);
+    pinMode(servo_pin, OUTPUT);
+    ESC.writeMicroseconds(1500);
+    servo.writeMicroseconds(1500);
+    Serial.println("11111111");
+    delay(1000);    // ensure ESC is initialized properly
+    servo.writeMicroseconds(1400);
+    delay(500);
+    servo.writeMicroseconds(1600);
+    delay(500);
+    servo.writeMicroseconds(1500);
     while(1) {
       Serial.readBytes(data_in, 8);
       esc_pulse = 1000 * (data_in[0] - 48) + 100 * (data_in[1] - 48) + 10 * (data_in[2] - 48) + (data_in[3] - 48);
