@@ -19,10 +19,7 @@ signal.signal(signal.SIGINT, signal_handler)
 interrupted = False
 def main():
 	BAUD_RATE = 115200
-	# argparse assignments
-	# directory name
-	# rate
-	# port
+	# argparse
 	ports = list(serial.tools.list_ports.comports())
 	
 	parser = argparse.ArgumentParser()
@@ -64,8 +61,12 @@ def main():
 				time.sleep(1)
 				ser.write(b'00000000')
 				ser.flush()
-				chk = ser.readline().decode('utf-8')
-				print('Check: ' + chk)
+				chk = ser.readline().decode('utf-8').strip()
+				if chk != '00000000':
+					print('Serial connection error. Exiting...')
+					return
+				else:
+					print('Connection established')
 				# capture frames
 				count = 0
 				prev_time = time.time()
@@ -89,7 +90,7 @@ def main():
 						fps = 10.0 / (time.time() - prev_time)
 						prev_time = time.time()
 					if interrupted:
-						print('Exiting')
+						print('\n\nExiting')
 						break
 						
 		
