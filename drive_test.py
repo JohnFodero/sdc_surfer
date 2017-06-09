@@ -57,19 +57,7 @@ def main():
 				conf = ser.readline().decode()
 				print(conf)
 				time.sleep(0.5)
-			"""
-			for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
-				image = frame.array
-				ser.write(b'00000000')
-				ser.flush()
-				if data:
-					cv2.imwrite(img_path, image)
-					print(data)
-					sp_data = data.strip().split(':')	
-					wr.writerow([img_path, sp_data[0], sp_data[1]])
-					count += 1
-				rawCapture.truncate(0)
-			"""		
+
 		
 if __name__ == '__main__':
 	main()
