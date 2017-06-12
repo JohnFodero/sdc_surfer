@@ -1,5 +1,5 @@
 import os
-from time import time
+from time import time, sleep
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import argparse
@@ -10,11 +10,10 @@ import cv2
 import numpy as np
 from keras.models import load_model
 from keras.models import Model
-
+import signal 
+from tools import map_range
 BAUD_RATE = 115200
-RESOLUTION = (320, 240)
-THROTTLE = 1
-speed = THROTTLE
+RESOLUTION = (128, 160)
 
 def signal_handler(signal, frame):
     # allows for clean interrupt of main control loop
@@ -26,7 +25,7 @@ interrupted = False
 def main():
     
     
-    parser - argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--fps", type=int, default=10, help="image capture rate")
     parser.add_argument("-p", "--port", type=str, help="serial port name")
     parser.add_argument("-m", "--model", type=str, default="./models/model.hdf5", help="path to model")
@@ -42,20 +41,21 @@ def main():
     model = load_model(args.model)
     # start camera
     with PiCamera() as camera:
-        camera.resolution = RESOLUION
+        camera.resolution = RESOLUTION
         camera.framerate = args.fps
         rawCapture = PiRGBArray(camera, size=RESOLUTION)
         
         # open serial connection
         with serial.Serial(port, BAUD_RATE, timeout=10, rtscts=0) as ser:
             ser.setDTR(False)
-            time.sleep(1)
-            ser.flushInput()
+            sleep(1)
             ser.setDTR(True)
+            ser.flushInput()
             ser.flushOutput()
+            sleep(1)
             ser.write(b'11111111')
             ser.flush()
-            confirm = ser.readline().decode()
+            confirm = ser.readline().decode().strip()
             if confirm != '11111111':
                 print('Serial connection error. Terminating.')
                 return        
@@ -64,16 +64,20 @@ def main():
             start_time = time()
             fps = args.fps
             for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
-                image = np.reshape(frame.array, (1, RESOLUTION[0], RESOLUTION[1], 3))
-                st_angle = model.predict(image)
-                # map the steering angle
-                #MAP
-                print(st_angle)
+                #image = frame.array
+                #cv2.imshow('frame', image)
+                #image = np.reshape(frame.array, (, RESOLUTION[0], RESOLUTION[1], 3))
+                #st_angle = model.predict(image)
+                speed = 0.2
+                st_angle = 0.5
+                # map the steering angle and throttle
+                speed = int(map_range(speed, 0, 1, 1500, 2000))
+                st_angle = int(map_range(st_angle, -1, 1, 1000, 2000))
                 ser.write('{:4d}{:4d}'.format(speed, st_angle).encode())
                 ser.flush()
-                if ser.readline().decode() != '1':
-                    print('Serial error')
-                    # abort?
+                check =  ser.readline().decode().strip()
+                if check != '1':
+                    print('Serial error: {' + check + '}')
                 if (count + 1) % 10 == 0:
                     fps = 10.0 / (time() - start_time)
                     start_time = time()

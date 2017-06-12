@@ -19,11 +19,12 @@ signal.signal(signal.SIGINT, signal_handler)
 interrupted = False
 
 def main():
-    MIN_ESC = 950
-    MAX_ESC = 1430
-    MIN_SERVO = 1150
-    MAX_SERVO = 1450
+    MIN_ESC = 1000
+    MAX_ESC = 2000
+    MIN_SERVO = 1000
+    MAX_SERVO = 2000
     BAUD_RATE = 115200
+    RESOLUTION = (128, 160)
     # argparse
     ports = list(serial.tools.list_ports.comports())
     
@@ -40,9 +41,9 @@ def main():
         port = ports[0][0]
 
     with PiCamera() as camera:
-        camera.resolution = (320,240)
+        camera.resolution = RESOLUTION
         camera.framerate = args.fps
-        rawCapture = PiRGBArray(camera, size=(320,240))
+        rawCapture = PiRGBArray(camera, size=RESOLUTION)
         print('Camera Started. Capturing @ %d fps' % args.fps)
         
         # make dirs
@@ -81,7 +82,7 @@ def main():
                     #if args.show:
                     #	cv2.imshow('frame', image)
                     img_path = './img/img{:04d}.jpeg'.format(count)
-                    ser.write(b'00000000')
+                    ser.write(b'0')
                     ser.flush()
                     data = ser.readline().decode('utf-8')
                     if data:
