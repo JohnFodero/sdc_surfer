@@ -8,41 +8,96 @@ Servo servo;
 
 int mode = 0;		      // 0 for capture mode, 1 for control mode
 char data_in[8];
-
+bool initializing = True;
 int st;
 int th;
-int sv;
-int esc;
+int sv = 1500, prev_sv = 1500;
+int esc = 1500, prev_esc = 1500;
 void setup()
 {
+
+  Serial.begin(115200);
+  Serial.setTimeout(1000);
+
   pinMode(esc_pin, OUTPUT);
   pinMode(servo_pin, OUTPUT);
   pinMode(th_pin, INPUT);
   pinMode(st_pin, INPUT);
   ESC.attach(esc_pin);
   servo.attach(servo_pin);
+
   ESC.writeMicroseconds(1500);
   servo.writeMicroseconds(1500);
   delay(1000);    // ensure ESC is initialized properly
 
-  Serial.begin(115200);
-
+  while(initializing) {
+    Serial.readBytes(data_in, 8);
+    if(data_in[0] == '0') {
+      mode = 0;
+      initializing = False;
+    }
+    else if(data_in[0] == '1') {
+      mode = 1;
+      initializing = False;
+    }
+  }
 
 }
 
 void loop()
 {
-  th = pulseIn(th_pin, HIGH);
-  st = pulseIn(st_pin, HIGH);
-  esc = map(th, 855, 1724, 1000, 2000);
-  sv = map(st, 855, 1724, 1000, 2000);
-  Serial.println(esc);
-  ESC.writeMicroseconds(esc);
-  servo.writeMicroseconds(sv);
+
+
+  switch (mode) {
+    case 0:
+      Serial.setTimeout(100);
+      while(True) {
+        th = pulseIn(th_pin, HIGH);
+        st = pulseIn(st_pin, HIGH);
+        prev_esc = esc;
+        prev_sv = sv;
+        esc = map(th, 855, 1724, 1000, 2000);
+        sv = map(st, 855, 1724, 1000, 2000);
+        esc = smooth_output(esc, prev_esc);
+        sv = smooth_output(sv, prev_sv);
+        ESC.writeMicroseconds(esc);
+        servo.writeMicroseconds(sv);
+        if(Serial.readBytes(data_in, 8) >= 8) {
+          Serial.println(String(esc) + ":" + String(sv));
+        }
+      }
+    break;
+    case 1:
+      while(True) {
+        if(Serial.readBytes(data_in, 8) >= 8) {
+          esc = 1000 * (data_in[7] - 48) + 100 * (data_in[6] - 48) + 10 * (data_in[5] - 48) + (data_in[4] - 48);
+          sv = 1000 * (data_in[3] - 48) + 100 * (data_in[2] - 48) + 10 * (data_in[1] - 48) + (data_in[0] - 48);
+          ESC.writeMicroseconds(esc);
+          servo.writeMicroseconds(sv);
+          Serial.println("1");
+        }
+        else {
+          // failsafe: if not enough serial data is received, stop esc and center servo
+          ESC.writeMicroseconds(1500);
+          servo.writeMicroseconds(1500);
+          Serial.println("0");
+        }
+      }
+    break;
+  }
+
+
 }
 
 
-
+int smooth_output(int val, int prev_val) {
+  int confidence = (val - prev_val) * (val - prev_val);
+  if (confidence > SENSITIVITY) {
+    return val;
+  else {
+    return prev_val;
+  }
+}
 
 
 
