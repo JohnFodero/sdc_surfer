@@ -60,8 +60,8 @@ void loop()
         prev_sv = sv;
         esc = map(th, 855, 1724, 1000, 2000);
         sv = map(st, 855, 1724, 1000, 2000);
-        esc = smooth_output(esc, prev_esc);
-        sv = smooth_output(sv, prev_sv);
+        //esc = smooth_output(esc, prev_esc);
+        //sv = smooth_output(sv, prev_sv);
        
         ESC.writeMicroseconds(esc);
         servo.writeMicroseconds(sv);
