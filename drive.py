@@ -13,7 +13,7 @@ from keras.models import Model
 import signal 
 from tools import map_range
 BAUD_RATE = 115200
-RESOLUTION = (128, 160)
+RESOLUTION = (160, 128)
 
 def signal_handler(signal, frame):
     # allows for clean interrupt of main control loop
@@ -66,13 +66,12 @@ def main():
             for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
                 #image = frame.array
                 #cv2.imshow('frame', image)
-                #image = np.reshape(frame.array, (, RESOLUTION[0], RESOLUTION[1], 3))
-                #st_angle = model.predict(image)
-                speed = 0.2
-                st_angle = 0.5
-                # map the steering angle and throttle
-                speed = int(map_range(speed, 0, 1, 1500, 2000))
-                st_angle = int(map_range(st_angle, -1, 1, 1000, 2000))
+                #image = np.reshape(frame.array, ( RESOLUTION[0], RESOLUTION[1], 3))
+                image = np.expand_dims(frame.array, axis=0)
+                st_angle = model.predict(image)
+                # map the steering angle
+                speed = 1500
+                st_angle = int(map_range(st_angle, -1000, 1000, 1000, 2000))
                 ser.write('{:4d}{:4d}'.format(speed, st_angle).encode())
                 ser.flush()
                 check =  ser.readline().decode().strip()
