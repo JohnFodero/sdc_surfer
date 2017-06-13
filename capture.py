@@ -24,7 +24,7 @@ def main():
     MIN_SERVO = 1000
     MAX_SERVO = 2000
     BAUD_RATE = 115200
-    RESOLUTION = (128, 160)
+    RESOLUTION = (160, 128)
     # argparse
     ports = list(serial.tools.list_ports.comports())
     
@@ -80,7 +80,8 @@ def main():
                 for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
                     image = frame.array
                     #if args.show:
-                    #	cv2.imshow('frame', image)
+                   # cv2.imshow('frame', image)
+                   # key = cv2.waitKey(1) & 0xFF
                     img_path = './img/img{:04d}.jpeg'.format(count)
                     ser.write(b'0')
                     ser.flush()
