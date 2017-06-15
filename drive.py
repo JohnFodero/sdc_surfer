@@ -5,13 +5,11 @@ from picamera import PiCamera
 import argparse
 import serial
 import serial.tools.list_ports
-import csv
 import cv2
 import numpy as np
 from keras.models import load_model
-from keras.models import Model
 import signal 
-from tools import map_range
+from tools import *
 BAUD_RATE = 115200
 RESOLUTION = (160, 128)
 
@@ -38,7 +36,9 @@ def main():
         port = ports[0][0]
     
     # load model
+    model = None
     model = load_model(args.model)
+    print('Model loaded..')
     # start camera
     with PiCamera() as camera:
         camera.resolution = RESOLUTION
@@ -64,10 +64,13 @@ def main():
             start_time = time()
             fps = args.fps
             for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
-                #image = frame.array
-                #cv2.imshow('frame', image)
-                #image = np.reshape(frame.array, ( RESOLUTION[0], RESOLUTION[1], 3))
-                image = np.expand_dims(frame.array, axis=0)
+                '''
+                cv2.imshow('frame', frame.array)
+                cv2.waitKey(1) & 0xFF
+                '''
+                image = process_image(frame.array)
+                image = np.expand_dims(image, axis=0)
+                
                 st_angle = model.predict(image)
                 # map the steering angle
                 speed = 1500
