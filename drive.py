@@ -69,6 +69,7 @@ def main():
                 cv2.waitKey(1) & 0xFF
                 '''
                 image = process_image(frame.array)
+                image = normalize(image)
                 image = np.expand_dims(image, axis=0)
                 
                 st_angle = model.predict(image)
