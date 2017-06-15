@@ -19,7 +19,7 @@ def import_data(directory):
             img = cv2.imread(path)
             if img is not None:
                 raw_X.append(img) 
-                raw_y.append(1000*float(row[2]))
+                raw_y.append(float(row[2]))
     return np.array(raw_X), np.array(raw_y)
 
 def shuffle_data(X, y):
@@ -36,3 +36,17 @@ def split_data(X, y, train_mark, val_mark):
     test_X, test_y = X[val_mark:], y[val_mark:]
     
     return train_X, train_y, val_X, val_y, test_X, test_y
+
+def process_image(image):
+    # crop out the horizon
+    img = image[35:,:,:]
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+    img = cv2.resize(img, (200, 66)) 
+    return img
+
+def normalize(images):
+    return images.astype('float32') / 255
+
+
+
+
