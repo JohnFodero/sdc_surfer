@@ -74,7 +74,7 @@ def main():
                 st_angle = model.predict(image)
                 # map the steering angle
                 speed = 1500
-                st_angle = int(map_range(st_angle, -1000, 1000, 1000, 2000))
+                st_angle = int(map_range(st_angle, -1, 1, 1000, 2000))
                 ser.write('{:4d}{:4d}'.format(speed, st_angle).encode())
                 ser.flush()
                 check =  ser.readline().decode().strip()

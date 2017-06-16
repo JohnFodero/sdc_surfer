@@ -5,11 +5,12 @@ import numpy as np
 def map_range(x, min_x, max_x, min_y, max_y):
     return ( (x - min_x) * ((max_y - min_y) / (max_x - min_x)) ) + min_y
 
-def import_data(directory):
+def import_data(directory, cutoff=0):
 
     raw_X = []
     raw_y = []
-    data_path = '../inloop'
+    data_path = directory
+    count = 0
     with open(data_path + '/capture_log.csv', 'r') as f:
         reader = csv.reader(f)
         iterreader = iter(reader)
@@ -20,6 +21,9 @@ def import_data(directory):
             if img is not None:
                 raw_X.append(img) 
                 raw_y.append(float(row[2]))
+            count += 1
+            if cutoff > 0 and count == cutoff:
+                break
     return np.array(raw_X), np.array(raw_y)
 
 def shuffle_data(X, y):
